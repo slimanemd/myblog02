@@ -1,0 +1,410 @@
+02040316501245
+<?php
+
+/* ------------------------------------------------------------------------------ */
+//
+class Database
+{
+
+    // DB Params
+    private $host = 'localhost';
+    private $db_name = 'dbmyblog';
+    private $username = 'aliben01';
+    private $password = 'Security_39';
+    private $conn;
+
+    // private
+    public static $sconn;
+
+    // DB Connect
+    public function connect0()
+    {
+        $this->conn = null;
+
+        try {
+            $this->conn = new PDO('mysql:host=' . $this->host . ';dbname=' . $this->db_name, $this->username, $this->password);
+            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            if (Config::$_DEBUG)
+                echo 'Connection OK' . '<br>';
+        } catch (PDOException $e) {
+            echo 'Connection Error: ' . $e->getMessage() . '<br>';
+        }
+
+        return $this->conn;
+    }
+
+    // DB Connect
+    public static function connect()
+    {
+        // self::sconn = null;
+        self::$sconn = null;
+        try {
+            self::$sconn = new PDO('mysql:host=' . $this->host . ';dbname=' . $this->db_name, $this->username, $this->password);
+            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            if (Config::$_DEBUG)
+                echo 'Connection OK' . '<br>';
+        } catch (PDOException $e) {
+            echo 'Connection Error: ' . $e->getMessage() . '<br>';
+        }
+
+        return $this->conn;
+    }
+
+    // Get categories :Create query > Prepare statement > Execute query
+    public static function doPrepExecGetStms($conn, $query)
+    {
+        $stmt = $conn->prepare($query);
+        $stmt->execute();
+        return $stmt;
+    }
+}
+
+/* ------------------------------------------------------------------------------ */
+// Test DB connection
+function Database_main()
+{
+    $db = new Database();
+    $db->connect();
+}
+
+// main
+// Database_main();
+?>
+========================================
+<?php
+  //
+  //include_once "../config/Database.php";
+  //include_once("../utiles/Utile.php");
+
+//
+class CategoryEntity{
+  // Properties
+  public $id;
+  public $name;
+  public $created_at;
+
+  //
+  public function __construct()
+  {
+  }
+
+  //
+  public function setEntityProperties($row){
+    foreach(array_keys($row) as $key) $this->$key = $row[$key];
+    //$this->id = $row['id'];
+    //$this->name = $row['name'];
+  }
+
+  //
+  public function toString(){
+    return $this->id . " ; " . $this->name;
+  }
+}
+
+//
+class Category
+{
+  // DB Stuff
+  private static $conn;
+  private $table = 'categories';
+  private $entity;
+
+  // Constructor with DB
+  public function __construct($db, $entity)
+  {
+    //self::$conn = $db;
+    $this->conn = $db;
+    $this->entity = $entity; // new CategoryEntity();
+  }
+
+  // Get categories :Create query > Prepare statement > Execute query
+  public function read()
+  {
+    $query = 'SELECT id, name, created_at FROM ' . $this->table . ' ORDER BY created_at DESC';
+    $stmt = $this->conn->prepare($query); 
+    $stmt->execute();
+    return $stmt;
+  }
+
+  // Get Single Category
+  public function read_single()
+  {
+    // set properties
+    $row = $this->read_single2($this->entity->id);
+    $this->entity->setEntityProperties($row);   //$this->id = $row['id'];//$this->name = $row['name'];
+  }
+
+  //
+  public function read_single2($pId)
+  {
+    // Create query >  //Prepare statement >     // Bind ID >     // Execute query
+    //$query = 'SELECT id, name FROM ' . $this->table . ' WHERE id = ? LIMIT 0,1';
+    $query = 'SELECT id, name FROM ' . $this->table . ' WHERE id = :id LIMIT 0,1';
+    $stmt = $this->conn->prepare($query);
+    //$stmt->bindParam(1, $pId);
+    $stmt->bindParam(':id', $pId);
+    $stmt->execute();
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row;
+  }
+
+  // Create Category
+  public function create()
+  {
+    $this->entity->name = htmlspecialchars(strip_tags($this->entity->name));
+
+    // Create Query     // Prepare Statement     // Clean data     // Bind data      // Execute query
+    $query = 'INSERT INTO ' . $this->table . 'SET name = :name';
+    $stmt = $this->conn->prepare($query);
+    $stmt->bindParam(':name', $this->entity->name);
+    if ($stmt->execute())  return true;     // Print error if something goes wrong
+    printf("Error: $.\n", $stmt->error);
+    return false;
+  }
+
+
+  // Update Category
+  public function update()
+  {
+    //
+    $this->entity->name = htmlspecialchars(strip_tags($this->entity->name));
+    $this->entity->id = htmlspecialchars(strip_tags($this->entity->id));
+
+    // Create Query     // Prepare Statement     // Clean data     // Bind data      // Execute query
+    $query = 'UPDATE ' .  $this->table . '  SET   name = :name    WHERE     id = :id';
+    $stmt = $this->conn->prepare($query);
+    $stmt->bindParam(':name', $this->name);
+    $stmt->bindParam(':id', $this->id);
+    if ($stmt->execute()) return true;    // Print error if something goes wrong
+    printf("Error: $.\n", $stmt->error);
+    return false;
+  }
+
+  // Delete Category
+  public function delete()
+  {
+    // Create query // Prepare Statement  // clean data     // Bind Data     // Execute query
+    $query = 'DELETE FROM ' . $this->table . ' WHERE id = :id';    
+    $stmt = $this->conn->prepare($query);   
+    $this->id = htmlspecialchars(strip_tags($this->id));
+    $stmt->bindParam(':id', $this->id);
+    if ($stmt->execute()) return true;     // Print error if something goes wrong
+    printf("Error: $.\n", $stmt->error);
+    return false;
+  }
+}
+
+//
+$categoryFactory = function ($conn){ return new Category($conn, new CategoryEntity()); };
+
+//main
+function main(){
+  if(Config::$_DEBUG) echo('Category bg' . '<br>');
+  $ctg =  new Category((new Database())->connect(), new CategoryEntity());
+  $row = $ctg->read_single2(1);
+  print_r($row); echo('<br>');
+  if(Config::$_DEBUG) echo('Category ed' . '<br>');
+}
+
+//Test
+main();
+
+
+  /*
+  //main     //
+  Utile::readProcessEntity(
+    array('name' => 'category'),
+    $categoryFactory, 
+    function(&$args){ echo(" Preproc : xx - msg : " . $args[0] . "<br>");   },
+    function($row, &$args){ 
+      extract($row);    //array('id' => $id,'name' => $name )
+      echo(" Proc    : xx - msg : " . $id . "    " . $name . "<br>");  },
+    function(&$args){ echo(" PostProc: xx - msg : " . $args[0] . "<br>");  },
+    function(&$args){ echo('no data ' . $args['name']); }
+    );
+  */
+?>
+
+
+
+===========================================
+<?php
+  //
+  //include_once "../config/Database.php";
+  include_once("../utiles/Utile.php");
+
+//
+class CategoryEntity{
+  
+}
+
+
+//
+class Category
+{
+  // DB Stuff
+  private $conn;
+  private $table = 'categories';
+
+  // Properties
+  public $id;
+  public $name;
+  public $created_at;
+
+  // Constructor with DB
+  public function __construct($db)
+  {
+    $this->conn = $db;
+  }
+
+  // Get categories
+  public function read()
+  {
+    // Create query
+    $query = 'SELECT
+        id,
+        name,
+        created_at
+      FROM
+        ' . $this->table . '
+      ORDER BY
+        created_at DESC';
+
+    // Prepare statement
+    $stmt = $this->conn->prepare($query);
+
+    // Execute query
+    $stmt->execute();
+
+    return $stmt;
+  }
+
+  // Get Single Category
+  public function read_single()
+  {
+    // Create query
+    $query = 'SELECT
+          id,
+          name
+        FROM
+          ' . $this->table . '
+      WHERE id = ?
+      LIMIT 0,1';
+
+    //Prepare statement
+    $stmt = $this->conn->prepare($query);
+
+    // Bind ID
+    $stmt->bindParam(1, $this->id);
+
+    // Execute query
+    $stmt->execute();
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // set properties
+    $this->id = $row['id'];
+    $this->name = $row['name'];
+  }
+
+  // Create Category
+  public function create()
+  {
+    // Create Query
+    $query = 'INSERT INTO ' . $this->table . 'SET name = :name';
+
+    // Prepare Statement
+    $stmt = $this->conn->prepare($query);
+
+    // Clean data
+    $this->name = htmlspecialchars(strip_tags($this->name));
+
+    // Bind data
+    $stmt->bindParam(':name', $this->name);
+
+    // Execute query
+    if ($stmt->execute()) {
+      return true;
+    }
+
+    // Print error if something goes wrong
+    printf("Error: $.\n", $stmt->error);
+
+    return false;
+  }
+
+
+  // Update Category
+  public function update()
+  {
+    // Create Query
+    $query = 'UPDATE ' .  $this->table . '  SET   name = :name    WHERE     id = :id';
+    // Prepare Statement
+    $stmt = $this->conn->prepare($query);
+
+    // Clean data
+    $this->name = htmlspecialchars(strip_tags($this->name));
+    $this->id = htmlspecialchars(strip_tags($this->id));
+
+    // Bind data
+    $stmt->bindParam(':name', $this->name);
+    $stmt->bindParam(':id', $this->id);
+
+    // Execute query
+    if ($stmt->execute()) {
+      return true;
+    }
+
+    // Print error if something goes wrong
+    printf("Error: $.\n", $stmt->error);
+
+    return false;
+  }
+
+  // Delete Category
+  public function delete()
+  {
+    // Create query
+    $query = 'DELETE FROM ' . $this->table . ' WHERE id = :id';
+
+    // Prepare Statement
+    $stmt = $this->conn->prepare($query);
+
+    // clean data
+    $this->id = htmlspecialchars(strip_tags($this->id));
+
+    // Bind Data
+    $stmt->bindParam(':id', $this->id);
+
+    // Execute query
+    if ($stmt->execute()) {
+      return true;
+    }
+
+    // Print error if something goes wrong
+    printf("Error: $.\n", $stmt->error);
+
+    return false;
+  }
+}
+
+  //
+  $categoryFactory = function ($conn){ return new Category($conn); };
+
+  /*
+  //main     //
+  Utile::readProcessEntity(
+    array('name' => 'category'),
+    $categoryFactory, 
+    function(&$args){ echo(" Preproc : xx - msg : " . $args[0] . "<br>");   },
+    function($row, &$args){ 
+      extract($row);    //array('id' => $id,'name' => $name )
+      echo(" Proc    : xx - msg : " . $id . "    " . $name . "<br>");  },
+    function(&$args){ echo(" PostProc: xx - msg : " . $args[0] . "<br>");  },
+    function(&$args){ echo('no data ' . $args['name']); }
+    );
+  */
+?>
+
+
