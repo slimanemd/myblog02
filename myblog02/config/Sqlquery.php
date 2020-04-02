@@ -25,6 +25,7 @@ into_option: { INTO OUTFILE 'file_name'
 }
 */
 
+//
 class Select{
   //
   public $query="";
@@ -122,7 +123,7 @@ function main(){
 
 }
 
-//main();
+main();
 
 ?>
 
