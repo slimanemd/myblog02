@@ -5,30 +5,27 @@
   header('Access-Control-Allow-Methods: PUT');
   header('Access-Control-Allow-Headers: Access-Control-Allow-Headers, Content-Type, Access-Control-Allow-Methods, Authorization,X-Requested-With');
 
-  include_once '../../config/Database.php';
-  include_once '../../models/Category.php';
-  // Instantiate DB & connect
-  $database = new Database();
-  $db = $database->connect();
-
-  // Instantiate blog post object
-  $category = new Category($db);
-
-  // Get raw posted data
-  $data = json_decode(file_get_contents("php://input"));
-
-  // Set ID to UPDATE
-  $category->id = $data->id;
-
-  $category->name = $data->name;
-
-  // Update post
-  if($category->update()) {
-    echo json_encode(
-      array('message' => 'Category Updated')
-    );
-  } else {
-    echo json_encode(
-      array('message' => 'Category not updated')
-    );
+  //doCataegoryCreating
+  function doCategoryUpdating($data){
+      global $db;
+      
+      $result = (CategoryManager::categoryFactory()($db))->update(
+          ['id'   => htmlspecialchars(strip_tags($data->id))],
+          ['name' => htmlspecialchars(strip_tags($data->name))]);
+          //['id'   => htmlspecialchars(strip_tags($data['id']))],
+          //['name' => htmlspecialchars(strip_tags($data['name']))]);
+      return $result;
   }
+  
+  //read_main
+  function update_main(){
+      //api json encode / decode      // Get raw posted data
+      $data = json_decode(file_get_contents("php://input"));      //$data = ['id'=>1, 'name'=>'ALI'];
+      $result =  doCategoryUpdating($data);
+      
+      //
+      echo(json_encode(
+          array('message' => 'Category '. (($result == null )? 'Not ':'') .'Updated')
+          ));
+  }
+?>

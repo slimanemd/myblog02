@@ -1,8 +1,5 @@
 <?php
-  //
-  //include_once "../config/Database.php";
-  //include_once("../utiles/Utile.php");
-
+/*------------------------------------------------------------------*/
 //
 class CategoryEntity{
   // Properties
@@ -11,9 +8,7 @@ class CategoryEntity{
   public $created_at;
 
   //
-  public function __construct()
-  {
-  }
+  public function __construct()  {  }
 
   //
   public function setEntityProperties($row){
@@ -25,152 +20,100 @@ class CategoryEntity{
     return $this->id . " ; " . $this->name;
   }
 }
+/*------------------------------------------------------------------*/
 
+/*------------------------------------------------------------------*/
 //
-class Category
+class CategoryManager
 {
   // DB Stuff
-  private static $conn;
   private $table = 'categories';
   public $entity;
-
-  // Constructor with DB
-  public function __construct($db, $entity)
-  {
-    $this->conn = $db;
-    $this->entity = $entity; // new CategoryEntity();
+  public $db;
+  
+  const TABLE = "categories";
+  const FIELDS = ['id','name','created_at'];
+  
+  //Cat
+  public function __construct($db, $entity){
+    $this->db =  $db;
+    $this->entity = $entity;
   }
 
-  // Get categories :Create query > Prepare statement > Execute query
-  public function read()
-  {
-    //$query = 'SELECT id, name, created_at FROM ' . $this->table . ' ORDER BY created_at DESC';
-    $query = (new Select(['id','nm:name','created_at']))
-            ->from(['category'])
-            ->orderby(['created_at'])
-            ->query;
-
-    //$stmt = $this->conn->prepare($query); 
-    //$stmt->execute();
-    //return $stmt;
-    return $this->doPrepExecGetStms($this->conn, $query);
-
-  }
-
-  // Get categories :Create query > Prepare statement > Execute query
-  public function doPrepExecGetStms($conn, $query)
-  {
-    $stmt = $conn->prepare($query); 
-    $stmt->execute();
-    return $stmt;
-  }
-
-
-  // Get Single Category
-  public function read_single($pParams)
+  //Read from database  
+  public function read($pParams = [])  //_single3
   {
     // set properties
-    $stmt = $this->read_single3($pParams);    //echo($row);    //print_r($stmt);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);    //print_r($row);
-    $this->entity->setEntityProperties($row);   //$this->id = $row['id'];//$this->name = $row['name'];
+    $query = (new Select(self::FIELDS))   //['id','name']
+            ->from([self::TABLE])
+            ->where(($pParams == [])?'*':'id = :id')  //            ->limit(0,1)
+            ->orderby(['created_at'])
+            ->query;
+    return $this->db->doPrepExecGetStmts($query, $pParams);
   }
-
-  //
-  public function read_single3($pParams)
-  {
-    // Create query >  //Prepare statement >     // Bind ID >     // Execute query
-    $query = 'SELECT id, name FROM ' . $this->table . ' WHERE id = :id LIMIT 0,1';
-    $stmt = $this->conn->prepare($query);
-    foreach(array_keys($pParams) as $key) $stmt->bindParam(':'.$key, $pParams[$key]);  
-    $stmt->execute();    
-    return $stmt;
-  }
-
 
   // Create Category
-  public function create()
-  {
-    $this->entity->name = htmlspecialchars(strip_tags($this->entity->name));
-
-    // Create Query     // Prepare Statement     // Clean data     // Bind data      // Execute query
-    $query = 'INSERT INTO ' . $this->table . 'SET name = :name';
-    $stmt = $this->conn->prepare($query);
-    $stmt->bindParam(':name', $this->entity->name);
-    if ($stmt->execute())  return true;     // Print error if something goes wrong
-    printf("Error: $.\n", $stmt->error);
-    return false;
+  public function crud($operation, $pParams =[], $pSetMap=[]) {
+      
+      if($operation == 'read')
+        $query = (new Select(self::FIELDS))   //['id','name']
+            ->from([self::TABLE])
+            ->where(($pParams == [])?'*':'id = :id')  //            ->limit(0,1)
+            ->orderby(['created_at'])
+            ->query;
+      
+      if($operation == 'create')
+          $query = (new Insert(self::TABLE))->set(array_keys($pSetMap))->query;
+      
+      if($operation == 'update')
+        $query = (new Update(['Tab'=> self::TABLE, 'Set'=>array_keys($pSetMap),'Cri'=>'id = :id']))->query;  //['name']
+      
+      if($operation == 'delete')
+        $query = (new Delete(['Tab'=> self::TABLE, 'Cri'=>'id = :id']))->query; 
+      
+      //
+      return $this->db->doPrepExecGetStmts($query, array_merge($pParams, $pSetMap));
+  }
+  
+  
+  // Create Category
+  public function create($pParams) {      
+      $query = (new Insert(self::TABLE))->set(array_keys($pParams))->query;  //['name']
+      return $this->db->doPrepExecGetStmts($query, $pParams);
   }
 
-
-  // Update Category
-  public function update()
-  {
-    //
-    $this->entity->name = htmlspecialchars(strip_tags($this->entity->name));
-    $this->entity->id = htmlspecialchars(strip_tags($this->entity->id));
-
-    // Create Query     // Prepare Statement     // Clean data     // Bind data      // Execute query
-    $query = 'UPDATE ' .  $this->table . '  SET   name = :name    WHERE     id = :id';
-    $stmt = $this->conn->prepare($query);
-    $stmt->bindParam(':name', $this->name);
-    $stmt->bindParam(':id', $this->id);
-    if ($stmt->execute()) return true;    // Print error if something goes wrong
-    printf("Error: $.\n", $stmt->error);
-    return false;
+  // Create Category
+  public function update($pParams, $pSetMap) {
+      $query = (new Update(['Tab'=> self::TABLE, 'Set'=>array_keys($pSetMap),'Cri'=>'id = :id']))->query;  //['name']
+      return $this->db->doPrepExecGetStmts($query, array_merge($pParams, $pSetMap));
   }
 
-  // Delete Category
-  public function delete()
-  {
-    // Create query // Prepare Statement  // clean data     // Bind Data     // Execute query
-    $query = 'DELETE FROM ' . $this->table . ' WHERE id = :id';    
-    $stmt = $this->conn->prepare($query);   
-    $this->id = htmlspecialchars(strip_tags($this->id));
-    $stmt->bindParam(':id', $this->id);
-    if ($stmt->execute()) return true;     // Print error if something goes wrong
-    printf("Error: $.\n", $stmt->error);
-    return false;
+  // Create Category
+  public function delete($pParams) {
+      $query = (new Delete(['Tab'=> self::TABLE, 'Cri'=>'id = :id']))->query;  //['name']
+      return $this->db->doPrepExecGetStmts($query, $pParams);
+  }
+  
+  //categoryFactory
+  public static function categoryFactory() {
+      return function ($db){ 
+          return new CategoryManager($db, new CategoryEntity()); 
+      };
   }
 }
+
+//$categoryFactory = function ($db){ return new CategoryManager($db, new CategoryEntity()); };
 
 //
-$categoryFactory = function ($conn){ return new Category($conn, new CategoryEntity()); };
-
-//main
-function main2(){
-  if(Config::$_DEBUG) echo('Category bg' . '<br>');
-  $ctg =  new Category((new Database())->connect(), new CategoryEntity());
-  $ctg->read_single(['id'=>2]);  //$ctg->entity->toString()v
-  echo($ctg->entity->toString() . '<br>');
-  if(Config::$_DEBUG) echo('Category ed' . '<br>');
+function Category_main(){
+    global $db;
+    
+    print_r((CategoryManager::categoryFactory())($db)->update(['id'=> 1],['name'=>'DOM']));
 }
-
-
-//
-function main(){
-
-}
-
-
-
 
 //Test
-main();
+//Category_main();
 
-
-  /*
-  //main     //
-  Utile::readProcessEntity(
-    array('name' => 'category'),
-    $categoryFactory, 
-    function(&$args){ echo(" Preproc : xx - msg : " . $args[0] . "<br>");   },
-    function($row, &$args){ 
-      extract($row);    //array('id' => $id,'name' => $name )
-      echo(" Proc    : xx - msg : " . $id . "    " . $name . "<br>");  },
-    function(&$args){ echo(" PostProc: xx - msg : " . $args[0] . "<br>");  },
-    function(&$args){ echo('no data ' . $args['name']); }
-    );
-  */
 ?>
 
 

@@ -26,10 +26,51 @@ into_option: { INTO OUTFILE 'file_name'
 */
 
 //
-class Select{
-  //
-  public $query="";
+class Query{
+    //
+    public $query="";
+    
+    //adr = [ALL | DISTINCT | DISTINCTROW ]
+    public function __construct()
+    {
+    }
+    
+    //
+    public function from($table_references){ $this->query .= ("FROM ".join($table_references, ", "));
+    return $this;
+    }
+    
+    //
+    public function where($condition){
+        if($condition != '*') $this->query .= " WHERE " . $condition;
+        return $this;    }
+        
+    public function limit($offset,  $row_count){ $this->query .= " LIMIT " . $offset . ',' . $row_count; return $this; }
+    public function orderby($cxps, $option = 'ASC'){ $this->query .= " ORDER BY " . ("".join($cxps, ", ")) . " ". $option; return $this; }
+    public function groupby($cxps, $option = 'ASC'){ $this->query .= " GROUP BY " . ("".join($cxps, ", ")) . $option; return $this; }
+    public function having($cxps, $option = 'ASC'){ $this->query .= " GROUP BY " . ("".join($cxps, ", ")) . $option; return $this; }
+    
+//     //
+//     public function set($pSetMap){
+//         $keyscolonKeys = array_map(
+//             function($key){ return $key . " = :" . $key; },
+//             array_keys($pSetMap));
+//         $this->query .= "SET ".join($keyscolonKeys, ", ");
+//         return $this;
+//     }        
 
+    //(Field = :Field)+
+    public function set($pFields){
+        $keyscolonKeys = array_map( function($key){ return $key . " = :" . $key; }, $pFields);
+        $this->query .= "SET ".join($keyscolonKeys, ", ");
+        return $this;
+    }
+    
+
+}
+
+//
+class Select extends Query{
   //adr = [ALL | DISTINCT | DISTINCTROW ]
   public function __construct($select_expr_list, $adr = 'ALL')
   {
@@ -39,16 +80,48 @@ class Select{
     if (in_array($adr, ['DISTINCT','DISTINCTROW'])) $this->query .= $adr . " ";
   }
 
-  //
-  public function from($table_references){ $this->query .= ("FROM ".join($table_references, ", ")); 
-    return $this;   
-  }
-  public function where($condition){ $this->query .= " WHERE " . $condition;  return $this;    }
-  public function limit($offset,  $row_count){ $this->query .= " LIMIT " . $offset . ',' . $row_count; return $this; }
-  public function orderby($cxps, $option = 'ASC'){ $this->query .= " ORDER BY " . ("".join($cxps, ", ")) . $option; return $this; }
-  public function groupby($cxps, $option = 'ASC'){ $this->query .= " GROUP BY " . ("".join($cxps, ", ")) . $option; return $this; }
-  public function having($cxps, $option = 'ASC'){ $this->query .= " GROUP BY " . ("".join($cxps, ", ")) . $option; return $this; }  
+//   //
+//   public function from($table_references){ $this->query .= ("FROM ".join($table_references, ", ")); 
+//     return $this;   
+//   }
+//   public function where($condition){ 
+//       if($condition != '*') $this->query .= " WHERE " . $condition;  
+//       return $this;    }
+//   public function limit($offset,  $row_count){ $this->query .= " LIMIT " . $offset . ',' . $row_count; return $this; }
+//   public function orderby($cxps, $option = 'ASC'){ $this->query .= " ORDER BY " . ("".join($cxps, ", ")) . " ". $option; return $this; }
+//   public function groupby($cxps, $option = 'ASC'){ $this->query .= " GROUP BY " . ("".join($cxps, ", ")) . $option; return $this; }
+//   public function having($cxps, $option = 'ASC'){ $this->query .= " GROUP BY " . ("".join($cxps, ", ")) . $option; return $this; }  
+}
 
+//$query = (new Insert(self::TABLE))->set( array_keys($pSetMap) )->query;  //['name']
+class Insert extends Query{   
+    //adr = [ALL | DISTINCT | DISTINCTROW ]
+    public function __construct($pTable)
+    {
+        $this->query="INSERT INTO " . $pTable . " ";
+    }
+}
+
+//$query = (new Insert(self::TABLE))->set( array_keys($pSetMap) )->query;  //['name']
+class Update  extends Query{    
+    //
+    public function __construct($pParams)
+    {
+        // $pTable,$pSetMap, $pCritiria
+        $this->query="UPDATE " . $pParams['Tab'] . " ";
+        $this->set($pParams['Set'])->where($pParams['Cri']);  //['name']
+    }
+}
+
+//$query = (new Insert(self::TABLE))->set( array_keys($pSetMap) )->query;  //['name']
+class Delete  extends Query{
+    //
+    public function __construct($pParams)
+    {
+        // $pTable,$pSetMap, $pCritiria
+        $this->query="DELETE FROM " . $pParams['Tab'] . " ";
+        $this->where($pParams['Cri']);  //['name']
+    }
 }
 
 //
@@ -94,7 +167,7 @@ class Builder{
 }
 
 //
-function main(){
+function sqlquery_main(){
   $bl =  new Builder();
   $q = ($bl->select(['id','nm:name','created_at']))
            ->from('category')
@@ -123,7 +196,7 @@ function main(){
 
 }
 
-main();
+//main();
 
 ?>
 

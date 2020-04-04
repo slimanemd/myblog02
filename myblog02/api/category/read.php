@@ -3,101 +3,34 @@
   header('Access-Control-Allow-Origin: *');
   header('Content-Type: application/json');
 
-  //include_once('../../config/Database.php');
-  include_once("../../utiles/Utile.php");
-  include_once('../../models/Category.php');
-
-  //processing loop body & Push to "data"
-  $categoryProcessor = function($row, &$args){
-    extract($row);  
-    array_push($args['data'], 
-      array(
-        'id' => $id,
-        'name' => $name
-      )
-    );
-  };
-
-  //
-  $dox(
-    array('name' => 'category'),   
-    $categoryFactory, 
-    $categoryProcessor);
-
-
-
-
-
-  /*
-  //read entities
-  Utile::readProcessEntity(
-    array('name' => 'category'),
-    //
-    $categoryFactory, 
-
-    //preprocessing init 
-    function(&$args){
-      $args = array();
-      $args['data'] = array();
-    },
-
-    //processing loop body
-    function($row, &$args){
-      extract($row);  // Push to "data"
-      array_push($args['data'], array('id' => $id,'name' => $name ));
-    },
-
-    //postprocessing
-    function(&$args){ echo json_encode($args); },
-
-    //on error processing No Categories
-    function(&$args){ echo json_encode( array('message' => 'No Categories Found')); }
-    );
-*/
-
-  // // Instantiate DB & connect
-  // $database = new Database();
-  // $db = $database->connect();
-
-  // // Instantiate category object
-  // $category = new Category($db);
-
-  // // Category read query
-  // $result = $category->read();
+  //doCataegoryReading
+  function doCategoryReading($id0){
+      //processing loop body & Push to "data"
+      $categoryProcessor = function($row, &$args){
+          extract($row);
+          $item = array(
+              'id' => $id,
+              'name' => $name );
+          array_push($args['data'], $item );
+      };
+      
+      //
+      $result = Utile::readProcessEntity(
+          ($id0 == -1)? [] : ['id' => $id0],     //$categoryParams,
+          CategoryManager::categoryFactory(),  // $categoryFactory
+          function(){  $args = array(); $args['data'] = array(); return $args; },  //init
+          $categoryProcessor); //processing
+          
+          return $result;
+  }
   
-  // // Get row count
-  // $num = $result->rowCount();
-
-  // // Check if any categories
-  // if($num > 0) {
-  //       // Cat array
-  //       $cat_arr = array();
-  //       $cat_arr['data'] = array();
-
-  //       while($row = $result->fetch(PDO::FETCH_ASSOC)) {
-  //         extract($row);
-
-  //         $cat_item = array(
-  //           'id' => $id,
-  //           'name' => $name
-  //         );
-
-  //         // Push to "data"
-  //         array_push($cat_arr['data'], $cat_item);
-  //       }
-
-  //       // Turn to JSON & output
-  //       echo json_encode($cat_arr);
-
-  // } else {
-  //       // No Categories
-  //       echo json_encode(
-  //         array('message' => 'No Categories Found')
-  //       );
-  // }
-
-
-
-
-
-
+  //read_main //api json encode / decode
+  function read_main(){  //$id=-1
+      global $idSelected;
+      
+      $data = $idSelected;  //json_decode(file_get_contents("php://input"));
+      $result =  doCategoryReading($data);
+      echo(json_encode( 
+            ($result == null)? array('message' => 'No Found '. 'Category') : $result ));
+    }
+?>

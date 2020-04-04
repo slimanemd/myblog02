@@ -5,45 +5,54 @@
 class Database
 {
     // DB Params
-    public static $host = 'localhost';
-    public static $db_name = 'dbmyblog';
-    public static $username = 'aliben01';
-    public static $password = 'Security_39';
-    public static $conn;
-
-    // DB Connect
-    public static function connect()
-    {
-        //self::$conn = null;
-        try {
-            self::$conn = new PDO('mysql:host=' . self::$host . ';dbname=' . self::$db_name,
-                                   self::$username, 
-                                   self::$password);
-            self::$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            
-            if (Config::$_DEBUG) echo 'Connection OK' . '<br>';
-        } catch (PDOException $e) {
-            echo 'Connection Error: ' . $e->getMessage() . '<br>';
-        }        //return self::$conn;
+    private $host = 'localhost';
+    private $db_name = 'dbmyblog';
+    private  $username = 'aliben01';
+    private $password = 'Security_39';
+    public $conn;
+    
+    //
+    public function __construct(){
+        $state_connect = $this->connect();   
+        if($state_connect != "OK")  die('Die: ' . $state_connect);
     }
-
-    // Get categories :Create query > Prepare statement > Execute query
-    public static function doPrepExecGetStms($conn, $query)
+    
+    // DB Connect
+    public function connect()
     {
-        $stmt = $conn->prepare($query);
-        $stmt->execute();
-        return $stmt;
+        try {
+            $this->conn = new PDO('mysql:host=' . $this->host . ';dbname=' . $this->db_name,
+                $this->username,
+                $this->password);
+            
+            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);     //if (Config::$_DEBUG) echo 'Connection OK' . '<br>';
+            return "OK";
+        } catch (PDOException $e) {
+            return 'Exception.Message: ' . $e->getMessage();
+        }     
+    }
+    
+    //
+    public function doPrepExecGetStmts($query, $pParams=[])
+    {
+        // Create query >  //Prepare statement >     // Bind ID >     // Execute query
+        $stmt = $this->conn->prepare($query);
+        if($pParams != []) foreach(array_keys($pParams) as $key) $stmt->bindParam(':'.$key, $pParams[$key]);
+        if($stmt->execute()) {  return $stmt;  }    // Print error if something goes wrong
+        print_r("Error: $.\n", $stmt->error);
+        return null;
     }
 }
 
 /* ------------------------------------------------------------------------------ */
 // Test DB connection
+$db = null;
+
 function Database_main()
 {
-    //$db = new Database();    //$db->connect();
-    Database::connect();
+    global $db;
+    $db = new Database();
+    //$query = "SELECT id, name, created_at FROM categories WHERE id = :id";
+    //$stmt = $db->doPrepExecGetStmts($query,['id' => 1]);    //print_r($stmt);
 }
-
-// main
-Database_main();
 ?>

@@ -1,3 +1,194 @@
+<!-- 
+?php
+  // Headers
+  header('Access-Control-Allow-Origin: *');
+  header('Content-Type: application/json');
+  header('Access-Control-Allow-Methods: PUT');
+  header('Access-Control-Allow-Headers: Access-Control-Allow-Headers, Content-Type, Access-Control-Allow-Methods, Authorization,X-Requested-With');
+
+  include_once '../../config/Database.php';
+  include_once '../../models/Category.php';
+  // Instantiate DB & connect
+  $database = new Database();
+  $db = $database->connect();
+
+  // Instantiate blog post object
+  $category = new Category($db);
+
+  // Get raw posted data
+  $data = json_decode(file_get_contents("php://input"));
+
+  // Set ID to UPDATE
+  $category->id = $data->id;
+
+  $category->name = $data->name;
+
+  // Update post
+  if($category->update()) {
+    echo json_encode(
+      array('message' => 'Category Updated')
+    );
+  } else {
+    echo json_encode(
+      array('message' => 'Category not updated')
+    );
+  }
+
+   -->
+-----------------------------------------
+
+<?php 
+  // Headers
+  header('Access-Control-Allow-Origin: *');
+  header('Content-Type: application/json');
+  
+  //read_main
+    function read_main($id=-1){
+        global $partialreadProcessEntity;
+        global $categoryFactory;
+        
+        $params = ($id == -1)? [] : ['id' => $id];
+        
+        //processing loop body & Push to "data"
+        $categoryProcessor = function($row, &$args){
+            extract($row);
+            $item = array(
+                'id' => $id,
+                'name' => $name );
+            array_push($args['data'], $item );
+        };
+
+        //
+        $partialreadProcessEntity(
+            array('name' => 'category'),   
+            $categoryFactory, 
+            $categoryProcessor, $params);
+    }
+?>
+-----------------------------
+02042021386597
+<?php
+
+/* ------------------------------------------------------------------------------ */
+//
+class Database
+{
+    // DB Params
+    public static $host = 'localhost';
+    public static $db_name = 'dbmyblog';
+    public static $username = 'aliben01';
+    public static $password = 'Security_39';
+    public static $conn;
+    
+    // DB Connect
+    public static function connect()
+    {
+        try {
+            self::$conn = new PDO('mysql:host=' . self::$host . ';dbname=' . self::$db_name,
+                self::$username,
+                self::$password);
+            
+            self::$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);     //if (Config::$_DEBUG) echo 'Connection OK' . '<br>';
+            return "OK";
+        } catch (PDOException $e) {
+            return 'Exception.Message: ' . $e->getMessage();
+        }     
+    }
+    
+    // Get categories :Create query > Prepare statement > Execute query
+    public static function doPrepExecGetStmts($query)
+    {
+        $stmt0 = self::$conn->prepare($query);         
+        $stmt0->execute();                             
+        return $stmt0;
+    }
+    
+    //
+    public static function doPrepExecGetStmtsWithParams($query, $pParams)
+    {
+        // Create query >  //Prepare statement >     // Bind ID >     // Execute query
+        $stmt = self::$conn->prepare($query);
+        
+        foreach(array_keys($pParams) as $key) $stmt->bindParam(':'.$key, $pParams[$key]);
+        
+        $ss = $stmt->execute();
+        print_r($ss);
+        return $stmt;
+    }
+    
+}
+
+/* ------------------------------------------------------------------------------ */
+// Test DB connection
+function Database_main()
+{
+    //
+    $state_connect =  Database::connect();
+    if($state_connect != "OK")  die('Die: ' . $state_connect);
+    
+    //
+    $query = "SELECT id, name, created_at FROM categories";
+    //$stmt = Database::$conn->prepare($query);
+    $stmt = Database::doPrepExecGetStmts($query);
+    print_r($stmt);
+    
+}
+
+// main
+//Database_main();
+?>
+
+
+----------------------------
+180749601
+
+  // Create Category
+  public function create()
+  {
+    $this->entity->name = htmlspecialchars(strip_tags($this->entity->name));
+
+    // Create Query     // Prepare Statement     // Clean data     // Bind data      // Execute query
+    $query = 'INSERT INTO ' . $this->table . 'SET name = :name';
+    
+    $stmt = $this->conn->prepare($query);
+    $stmt->bindParam(':name', $this->entity->name);
+    if ($stmt->execute())  return true;     // Print error if something goes wrong
+    printf("Error: $.\n", $stmt->error);
+    return false;
+  }
+
+
+  // Update Category
+  public function update()
+  {
+    //
+    $this->entity->name = htmlspecialchars(strip_tags($this->entity->name));
+    $this->entity->id = htmlspecialchars(strip_tags($this->entity->id));
+
+    // Create Query     // Prepare Statement     // Clean data     // Bind data      // Execute query
+    $query = 'UPDATE ' .  $this->table . '  SET   name = :name    WHERE     id = :id';
+    $stmt = $this->conn->prepare($query);
+    $stmt->bindParam(':name', $this->name);
+    $stmt->bindParam(':id', $this->id);
+    if ($stmt->execute()) return true;    // Print error if something goes wrong
+    printf("Error: $.\n", $stmt->error);
+    return false;
+  }
+
+  // Delete Category
+  public function delete()
+  {
+    // Create query // Prepare Statement  // clean data     // Bind Data     // Execute query
+    $query = 'DELETE FROM ' . $this->table . ' WHERE id = :id';    
+    $stmt = $this->conn->prepare($query);   
+    $this->id = htmlspecialchars(strip_tags($this->id));
+    $stmt->bindParam(':id', $this->id);
+    if ($stmt->execute()) return true;     // Print error if something goes wrong
+    printf("Error: $.\n", $stmt->error);
+    return false;
+  }
+
+--------------------------------------------------------
 02040316501245
 <?php
 
